@@ -10,7 +10,11 @@ public class InputManager : MonoBehaviour
     Controls input;
     public EventHandler<int> hitPerformed;
     public EventHandler pauseInputPerformed;
-    public Queue<int> hitQueue;
+
+    Queue<QueuedInput> inputQueue;
+    public int queueLimit;
+    
+    public float timeUntilNextInputProcessing;
     void Awake()
     {
         if (ins == null)
@@ -22,73 +26,74 @@ public class InputManager : MonoBehaviour
         {
             Destroy(gameObject);
         }
-
+        inputQueue = new Queue<QueuedInput>();
         input = new Controls();
         input.Enable();
-        hitQueue = new Queue<int>();
-        input.Game.hit1.performed += OnInput;
-        input.Game.hit2.performed += OnInput;
-        input.Game.hit3.performed += OnInput;
-        input.Game.hit4.performed += OnInput;
-        input.Game.hit5.performed += OnInput;
-        input.Game.hit6.performed += OnInput;
-        input.Game.hit7.performed += OnInput;
-        input.Game.hit8.performed += OnInput;
-        input.Game.hit9.performed += OnInput;
-        input.Game.pause.performed += OnInput;
+        input.Game.hit1.performed += ctx => QueueAction(1);
+        input.Game.hit2.performed += ctx => QueueAction(2);
+        input.Game.hit3.performed += ctx => QueueAction(3);
+        input.Game.hit4.performed += ctx => QueueAction(4);
+        input.Game.hit5.performed += ctx => QueueAction(5);
+        input.Game.hit6.performed += ctx => QueueAction(6);
+        input.Game.hit7.performed += ctx => QueueAction(7);
+        input.Game.hit8.performed += ctx => QueueAction(8);
+        input.Game.hit9.performed += ctx => QueueAction(9);
+        // Handle pause immediately due to its nature
+        input.Game.pause.performed += ctx => pauseInputPerformed?.Invoke(this, EventArgs.Empty);
     }
 
-    void OnInput(InputAction.CallbackContext context)
+    void QueueAction(int cellId)
     {
-        switch (context.action.name)
+        if (!GameManager.GetState().isPlaying)
         {
-            case "hit1":
-                hitQueue.Enqueue(1);
-                break;
-            case "hit2":
-                hitQueue.Enqueue(2);
-                break;
-            case "hit3":
-                hitQueue.Enqueue(3);
-                break;
-            case "hit4":
-                hitQueue.Enqueue(4);
-                break;
-            case "hit5":
-                hitQueue.Enqueue(5);
-                break;
-            case "hit6":
-                hitQueue.Enqueue(6);
-                break;
-            case "hit7":
-                hitQueue.Enqueue(7);
-                break;
-            case "hit8":
-                hitQueue.Enqueue(8);
-                break;
-            case "hit9":
-                hitQueue.Enqueue(9);
-                break;
-            case "pause":
-                pauseInputPerformed?.Invoke(this, EventArgs.Empty);
-                break;
+            return;
+        }
+        if (inputQueue.Count < queueLimit)
+        {
+            inputQueue.Enqueue(new QueuedInput(cellId, GameManager.GetState().weapon));
         }
     }
 
-    int queueLimit = 3;
-    
+
     void Update()
     {
-        if (hitQueue.Count > 0)
+        // if has inputs to do
+        if (inputQueue.Count > 0 && timeUntilNextInputProcessing <= 0)
         {
-            int numpadKey = hitQueue.Dequeue();
-            hitPerformed?.Invoke(this, numpadKey);
-
-            if (hitQueue.Count > queueLimit)
+            // get next action
+            QueuedInput nextInput = inputQueue.Dequeue();
+            // check if action is doable
+            Cell cell = GameManager.ins.GetCell(nextInput.cellId);
+            if (cell.uninterruptable)
             {
-                Debug.LogWarning("Input queue limit exceeded. Clearing the queue.");
-                hitQueue.Clear();
+                // put it back into queue
+                if (inputQueue.Count < queueLimit)
+                {
+                    inputQueue.Enqueue(nextInput);
+                }
+            }
+            else
+            {
+                GameManager.ins.OnInput(nextInput);
+                timeUntilNextInputProcessing = nextInput.weaponData.actionDuration;
             }
         }
+        if (timeUntilNextInputProcessing > 0)
+        {
+            timeUntilNextInputProcessing -= Time.deltaTime;
+        }
+        
+    }
+}
+
+public struct QueuedInput
+{
+    public readonly int cellId;
+    public readonly WeaponData weaponData;
+
+    public QueuedInput(int cellId, WeaponData weaponData)
+    {
+        this.cellId = cellId;
+        this.weaponData = weaponData;
     }
 }

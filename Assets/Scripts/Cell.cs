@@ -2,41 +2,85 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using DG.Tweening;
 
 public class Cell : MonoBehaviour
 {
     public int id;
     public CellState state;
     public GameObject platform;
-    public Entity currentEntity;
-
-    public GameObject entityPrefab;
+    //public GameObject currentEntity;
+    public Entity entity;
+    public GameObject weaponSprite;
+    public Vector3 downPlatformPos;
+    public Vector3 upPlatformPos;
     
-    // Start is called before the first frame update
+    float weaponStartAngle = 0;
+    float weaponEndAngle = 90;
+    public Transform weaponOrigin;
+    public Transform weaponTarget;
+    public bool uninterruptable;
+    float upDuration;
+    float upTime;
+    float upSpeed = 2f;
+    float downSpeed = 1f;
+    //Coroutine platformTimer;
+    
     void Awake()
     {
+        Init();
+    }
+
+    public void Init()
+    {
+        StopAllCoroutines();
+        //platformTimer = null;
+        upTime = 0;
+        uninterruptable = false;
+        isResetting = false;
+        entity.SetEntity(null);
         ChangeState(CellState.DOWN);
     }
-
-    public void RaisePlatformWithEntity(EntityData entityData)
+    
+    
+    void Update()
     {
-        GameObject newEntityPrefab = GameObject.Instantiate(entityPrefab);
-        newEntityPrefab.GetComponent<Entity>().SetEntity(entityData);
+        switch (state)
+        {
+            case CellState.RISING:
+                MoveUp();
+                break;
+            case CellState.FALLING:
+                MoveDown();
+                break;
+            case CellState.DOWN:
+                break;
+            case CellState.UP:
+                upTime -= Time.deltaTime;
+                if (upTime <= 0)
+                {
+                    ChangeState(CellState.FALLING);
+                }
+                break;
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
     }
-
+    
     void ChangeState(CellState newState)
     {
         state = newState;
         switch (state)
         {
             case CellState.DOWN:
+                ExpireEntity();
                 // stop platform
                 break;
             case CellState.RISING:
                 // raise platform
                 break;
             case CellState.UP:
-                // stop platform
+                upTime = upDuration;
                 break;
             case CellState.FALLING:
                 // drop platform
@@ -45,22 +89,117 @@ public class Cell : MonoBehaviour
                 throw new ArgumentOutOfRangeException();
         }
     }
-    
-    public void OnAnyCellHit(int cellId)
+
+    public void ActivateCellWithEntity(EntityData entityData, float duration)
     {
+        AddEntity(entityData);
+        upDuration = duration;
+        ChangeState(CellState.RISING);
+    }
+
+    public void AddEntity(EntityData entityData)
+    {
+        //GameObject newEntityPrefab = Instantiate(entityPrefab, spawnPoint.transform);
+        //newEntityPrefab.GetComponent<Entity>().SetEntity(entityData);
+        entity.SetEntity(entityData);
+        //return newEntityPrefab;
+    }
+    
+    void ExpireEntity()
+    {
+        if (!isResetting)
+        {
+            entity.OnExpired();
+        }
+    }
+
+    void OnEmptyCell()
+    {
+        if (!isResetting)
+        {
+            entity.OnDeath();
+        }
+        ChangeState(CellState.FALLING);
+    }
+    
+    public void MoveUp()
+    {
+        float step = upSpeed * Time.deltaTime;
+        platform.transform.localPosition = Vector3.MoveTowards(platform.transform.localPosition, upPlatformPos, step);
+        if (Vector3.Distance(platform.transform.localPosition, upPlatformPos) < 0.01f)
+        {
+            platform.transform.localPosition = upPlatformPos; // Snap to the exact target position to avoid overshooting.
+            ChangeState(CellState.UP); // Update the state as the movement is complete.
+        }
+    }
+
+    public void MoveDown()
+    {
+        float step = downSpeed * Time.deltaTime;
+        platform.transform.localPosition = Vector3.MoveTowards(platform.transform.localPosition, downPlatformPos, step);
+        if (Vector3.Distance(platform.transform.localPosition, downPlatformPos) < 0.01f)
+        {
+            platform.transform.localPosition = downPlatformPos; // Snap to the exact target position.
+            ChangeState(CellState.DOWN); // Update the state as the movement is complete.
+        }
+    }
+
+    
+    public void OnAnyCellHit(int cellId, WeaponData weaponData)
+    {
+       
         if (id == cellId)
         {
-            Debug.Log(cellId + " received event");
+            if (uninterruptable)
+            {
+                Debug.Log("GameManager needs to check if this cell is uninterruptable first");
+                return;
+            }
+            uninterruptable = true;
+            weaponSprite.GetComponent<SpriteRenderer>().enabled = true;
+            
+            // Start from the weaponStartAngle by directly setting the local rotation
+            weaponSprite.transform.localRotation = Quaternion.Euler(0, 0, weaponStartAngle);
+            weaponSprite.transform.position = weaponOrigin.position;
+            // Tween to the weaponEndAngle around the Z-axis in local space
+            weaponSprite.transform.DOLocalRotate(new Vector3(0, 0, weaponEndAngle), weaponData.actionDuration);
+            // Move the weaponSprite to the target position 
+            weaponSprite.transform.DOMove(weaponTarget.position, weaponData.actionDuration).OnComplete(() => OnWeaponAnimationComplete(weaponData));
         }
     }
     
-    // Update is called once per frame
-    void Update()
+    public void OnWeaponAnimationComplete(WeaponData weaponData)
     {
-        
+        weaponSprite.GetComponent<SpriteRenderer>().enabled = false;
+        uninterruptable = false;
+        if (entity.data != null)
+        {
+            bool entityDied = entity.ApplyDamage(weaponData);
+            if (entityDied)
+            {
+                if (entity.data == null)
+                {
+                    ChangeState(CellState.FALLING);
+                }
+            }
+        }
+        else
+        {
+            OnWhiff();
+        }
+    }
+
+    void OnWhiff()
+    {
+        GameManager.ins.ApplyPlayerDamage(1);
     }
     
-    
+    bool isResetting;
+    public void ResetCell()
+    {
+        isResetting = true;
+        ChangeState(CellState.FALLING);
+    }
 }
 
 
