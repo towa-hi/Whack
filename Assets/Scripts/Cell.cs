@@ -37,9 +37,10 @@ public class Cell : MonoBehaviour
         //platformTimer = null;
         upTime = 0;
         uninterruptable = false;
-        isResetting = false;
         entity.SetEntity(null);
+        platform.transform.localPosition = downPlatformPos;
         ChangeState(CellState.DOWN);
+        isResetting = false;
     }
     
     
@@ -73,7 +74,7 @@ public class Cell : MonoBehaviour
         switch (state)
         {
             case CellState.DOWN:
-                ExpireEntity();
+                entity.OnExpired();
                 // stop platform
                 break;
             case CellState.RISING:
@@ -104,24 +105,7 @@ public class Cell : MonoBehaviour
         entity.SetEntity(entityData);
         //return newEntityPrefab;
     }
-    
-    void ExpireEntity()
-    {
-        if (!isResetting)
-        {
-            entity.OnExpired();
-        }
-    }
 
-    void OnEmptyCell()
-    {
-        if (!isResetting)
-        {
-            entity.OnDeath();
-        }
-        ChangeState(CellState.FALLING);
-    }
-    
     public void MoveUp()
     {
         float step = upSpeed * Time.deltaTime;
@@ -197,8 +181,20 @@ public class Cell : MonoBehaviour
     bool isResetting;
     public void ResetCell()
     {
-        isResetting = true;
-        ChangeState(CellState.FALLING);
+        Init();
+    }
+
+    public void KillEntityOnCellAndDropReward()
+    {
+        if (entity.data != null)
+        {
+            EntityData reward = entity.data.reward;
+            bool droppedReward = entity.OnDeath();
+            if (!droppedReward)
+            {
+                entity.SetEntity(reward);
+            }
+        }
     }
 }
 

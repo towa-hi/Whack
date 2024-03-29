@@ -1,9 +1,15 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class NextLevelPanel : MonoBehaviour
 {
+    public void OnNextLevel()
+    {
+        Debug.Log("wew lad");
+        //GameManager.GetState().GoNextLevel();
+    }
     // Start is called before the first frame update
     void Start()
     {

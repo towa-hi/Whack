@@ -12,14 +12,11 @@ public class GameManager : MonoBehaviour
     
     Menu currentMenu;
     [SerializeField] PlayerState state;
-    public float timeUntilNextActivation;
     public MainMenu mainMenu;
     public SettingsMenu settingsMenu;
     public GameUiMenu gameMenu;
     public DeathMenu deathMenu;
 
-    public bool overtime;
-    
     public List<Cell> cells;
     public int startingHp;
     public AnimationCurve levelCellUpTimeCurve;
@@ -46,9 +43,9 @@ public class GameManager : MonoBehaviour
         entityDatas = new List<EntityData>(Resources.LoadAll<EntityData>("Data/Entities"));
         itemDatas = new List<ItemData>(Resources.LoadAll<ItemData>("Data/Items"));
         weaponDatas = new List<WeaponData>(Resources.LoadAll<WeaponData>("Data/Weapons"));
-
         // Example to show that objects are loaded
         Debug.Log($"Loaded {entityDatas.Count} entities, {itemDatas.Count} items, {weaponDatas.Count} weapons.");
+        SetLevelState(LevelState.PREGAME);
 
     }
 
@@ -58,11 +55,64 @@ public class GameManager : MonoBehaviour
         InputManager.ins.pauseInputPerformed += HandlePauseInput;
     }
     
+    
+    public LevelState levelState;
+    
     void Update()
     {
         // Early exit if the game state is not set or the game is not in play mode
-        if (GetState() == null || !GetState().isPlaying) return;
+        //if (GetState() == null || !GetState().isPlaying) return;
 
+        switch (levelState)
+        {
+            
+            case LevelState.PREGAME:
+                // dnt do anything just wait for StartGame()
+                break;
+            case LevelState.PLAYING:
+                if (GetState().levelTimeRemaining > 0)
+                {
+                    GetState().levelTimeRemaining -= Time.deltaTime;
+                    GetState().timeUntilNextActivation -= Time.deltaTime;
+                    if (GetState().timeUntilNextActivation <= 0)
+                    {
+                        // get the number of cells that should be activated
+                        int maxNumberOfCellsToActivate = Mathf.Max(1, GetState().GetLevelMaxSimultaneousCellActivations());
+                        int numberOfCellsToActivate = Random.Range(1, maxNumberOfCellsToActivate + 1);
+                        //List<int> activatedCellIds = new List<int>();
+                        for (int i = 0; i < numberOfCellsToActivate; i++)
+                        {
+                            Cell activatedCell = RandomlyActivateUnusedCell();
+                            if (activatedCell != null)
+                            {
+                                //activatedCellIds.Add(activatedCell.id);
+                            }
+                        }
+                        //Debug.Log(activatedCellIds.Count > 0 ? $"Activated these cells: {string.Join(", ", activatedCellIds)}" : "No cells activated this cycle.");
+                        GetState().timeUntilNextActivation = GetState().GetLevelTimeBetweenCellActivation();
+                    }
+                }
+                else
+                {
+                    SetLevelState(LevelState.WAITINGFORCLEANUP);
+                }
+                break;
+            case LevelState.WAITINGFORCLEANUP:
+                if (AllCellsDown())
+                {
+                    SetLevelState(LevelState.WAITINGFORNEXT);
+                }
+                break;
+            case LevelState.WAITINGFORNEXT:
+                break;
+            case LevelState.LOST:
+                break;
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+        
+        
+        /**
         // Handle Level Time and Progression
         if (!GetState().isWaitingForNextLevel)
         {
@@ -73,6 +123,10 @@ public class GameManager : MonoBehaviour
             }
             else
             {
+                foreach (Cell cell in cells)
+                {
+                    cell.KillEntityOnCellAndDropReward();
+                }
                 // Handle level completion when time runs out
                 if (AllCellsDown())
                 {
@@ -89,7 +143,7 @@ public class GameManager : MonoBehaviour
             {
                 // get the number of cells that should be activated
                 int maxNumberOfCellsToActivate = Mathf.Max(1, GetState().GetLevelMaxSimultaneousCellActivations());
-                int numberOfCellsToActivate = UnityEngine.Random.Range(1, maxNumberOfCellsToActivate + 1);
+                int numberOfCellsToActivate = Random.Range(1, maxNumberOfCellsToActivate + 1);
                 //List<int> activatedCellIds = new List<int>();
                 for (int i = 0; i < numberOfCellsToActivate; i++)
                 {
@@ -101,63 +155,56 @@ public class GameManager : MonoBehaviour
                 }
                 //Debug.Log(activatedCellIds.Count > 0 ? $"Activated these cells: {string.Join(", ", activatedCellIds)}" : "No cells activated this cycle.");
                 timeUntilNextActivation = GetState().GetLevelTimeBetweenCellActivation();
-            }
-        }
-    /**
-        if (GetState() == null || !GetState().isPlaying)
-        {
-            return;
-        }
-        if (GetState().levelTimeRemaining >= 0 && !GetState().isWaitingForNextLevel)
-        {
-            // level still in progress so decrement time
-            GetState().levelTimeRemaining -= Time.deltaTime;
-    
-            // loop for cell activations
-            timeUntilNextActivation -= Time.deltaTime;
-            if (timeUntilNextActivation <= 0)
-            {
-                // get the number of cells that should be activated
-                int maxNumberOfCellsToActivate = Mathf.Max(1, GetState().GetLevelMaxSimultaneousCellActivations());
-                int numberOfCellsToActivate = UnityEngine.Random.Range(1, maxNumberOfCellsToActivate + 1);
-                //List<int> activatedCellIds = new List<int>();
-                for (int i = 0; i < numberOfCellsToActivate; i++)
-                {
-                    Cell activatedCell = RandomlyActivateUnusedCell();
-                    if (activatedCell != null)
-                    {
-                        //activatedCellIds.Add(activatedCell.id);
-                    }
-                }
-                //Debug.Log(activatedCellIds.Count > 0 ? $"Activated these cells: {string.Join(", ", activatedCellIds)}" : "No cells activated this cycle.");
-                timeUntilNextActivation = GetState().GetLevelTimeBetweenCellActivation();
-            }
-        }
-        else
-        {
-            // time ran out so wait for all cells to be down and then end level
-            bool allCellsDown = true;
-            foreach (Cell cell in cells.Where(cell => cell.state != CellState.DOWN))
-            {
-                allCellsDown = false;
-            }
-            if (!GetState().isWaitingForNextLevel)
-            {
-                OnLevelEnd();
             }
         }
         **/
     }
 
+    void SetLevelState(LevelState newState)
+    {
+        switch (newState)
+        {
+            case LevelState.PREGAME:
+                // new game initialization here
+                state = new PlayerState(startingHp, weaponDatas[0]);
+                // immediately go into playing state
+                break;
+            case LevelState.PLAYING:
+                // init all cells
+                foreach (Cell cell in cells)
+                {
+                    cell.Init();
+                }
+                break;
+            case LevelState.WAITINGFORCLEANUP:
+                foreach (Cell cell in cells)
+                {
+                    cell.KillEntityOnCellAndDropReward();
+                }
+                break;
+            case LevelState.WAITINGFORNEXT:
+                
+                break;
+            case LevelState.LOST:
+                SetCurrentMenu(deathMenu);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(newState), newState, null);
+        }
+        levelState = newState;
+        
+    }
+
+    public void OnNextLevelButton()
+    {
+        GetState().GoLevel(GetState().level + 1);
+        SetLevelState(LevelState.PLAYING);
+    }
+    
     bool AllCellsDown()
     {
         // Check if all cells are in the DOWN state
         return cells.All(cell => cell.state == CellState.DOWN);
-    }
-    
-    public void OnLevelEnd()
-    {
-        GetState().StandbyForNextLevel();
     }
     
     public static PlayerState GetState()
@@ -169,12 +216,8 @@ public class GameManager : MonoBehaviour
     {
         SetCurrentMenu(gameMenu);
         state = new PlayerState(startingHp, weaponDatas[0]);
-        // init all cells
-        foreach (Cell cell in cells)
-        {
-            cell.Init();
-        }
-        GetState().SetIsPlaying(true);
+        SetLevelState(LevelState.PLAYING);
+        //GetState().SetIsPlaying(true);
     }
     
     List<EntityData> GetPossibleEntities()
@@ -194,12 +237,7 @@ public class GameManager : MonoBehaviour
     public void LoseGame()
     {
         Debug.Log("you just lost the game");
-        SetCurrentMenu(deathMenu);
-        GetState().SetIsPlaying(false);
-        foreach (var cell in cells)
-        {
-            cell.ResetCell();
-        }
+        SetLevelState(LevelState.LOST);
     }
     
     public void OnInput(QueuedInput input)
@@ -269,12 +307,14 @@ public class GameManager : MonoBehaviour
 
     void HandlePauseInput(object sender, EventArgs e)
     {
+        /**
         Debug.Log("pause or unpause game");
         GetState().SetIsPlaying(!GetState().isPlaying);
         if (currentMenu == gameMenu)
         {
             gameMenu.OnPause(!GetState().isPlaying);
         }
+        **/
     }
     
     void SetCurrentMenu(Menu newMenu)
@@ -301,10 +341,6 @@ public class GameManager : MonoBehaviour
         SetCurrentMenu(settingsMenu);
     }
 
-    public void OnPauseButton()
-    {
-        Debug.Log("OnPauseButton()");
-    }
 }
 
 public abstract class Menu : MonoBehaviour
@@ -320,8 +356,8 @@ public abstract class Menu : MonoBehaviour
 [Serializable]
 public class PlayerState
 {
-    public bool isPlaying;
-    public bool isWaitingForNextLevel;
+    //public bool isPlaying;
+    //public bool isWaitingForNextLevel;
     
     public int level;
     public int hp;
@@ -330,18 +366,19 @@ public class PlayerState
     public int score;
     public WeaponData weapon;
     public float levelTimeRemaining;
+    public float timeUntilNextActivation;
+    public bool isPaused;
     
     public PlayerState(int startingHp, WeaponData startingWeapon)
     {
-        isPlaying = false;
-        level = 1;
+        //isPlaying = false;
         maxHp = startingHp;
         hp = startingHp;
         coins = 0;
         weapon = startingWeapon;
-        levelTimeRemaining = GetLevelDuration();
+        GoLevel(1);
     }
-
+/**
     public void SetIsPlaying(bool newIsPlaying)
     {
         isPlaying = newIsPlaying;
@@ -354,7 +391,7 @@ public class PlayerState
             Time.timeScale = 0;
         }
     }
-
+**/
     public void AddScore(int amount)
     {
         score += amount;
@@ -368,6 +405,7 @@ public class PlayerState
             coins = 0;
         }
     }
+
 
     public void SetWeapon(WeaponData newWeapon)
     {
@@ -394,17 +432,19 @@ public class PlayerState
         return GameManager.ins.levelDurationCurve.Evaluate(level);
     }
 
-    public void StandbyForNextLevel()
+    public void GoLevel(int newLevel)
     {
-        isWaitingForNextLevel = true;
-        Debug.Log("standing by");
-    }
-    
-    public void GoNextLevel()
-    {
-        isWaitingForNextLevel = false;
-        level += 1;
+        level = newLevel;
         levelTimeRemaining = GetLevelDuration();
-        isPlaying = false;
+        timeUntilNextActivation = GetLevelTimeBetweenCellActivation();
     }
+}
+
+public enum LevelState
+{
+    PREGAME,
+    PLAYING,
+    WAITINGFORCLEANUP,
+    WAITINGFORNEXT,
+    LOST
 }

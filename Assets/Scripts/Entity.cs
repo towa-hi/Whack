@@ -28,9 +28,9 @@ public class Entity : MonoBehaviour
         }
     }
 
-    public void OnDeath()
+    public bool OnDeath()
     {
-        if (data == null) return;
+        if (data == null) return false;
         // create corpse here
         // spawn reward
         GameManager.GetState().AddScore(data.scoreReward);
@@ -38,10 +38,12 @@ public class Entity : MonoBehaviour
         if (data.reward != null && Random.value <= data.chanceToSpawnReward)
         {
             SetEntity(data.reward);
+            return true;
         }
         else
         {
             SetEntity(null);
+            return false;
         }
         
     }

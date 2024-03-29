@@ -44,10 +44,10 @@ public class InputManager : MonoBehaviour
 
     void QueueAction(int cellId)
     {
-        if (!GameManager.GetState().isPlaying)
-        {
-            return;
-        }
+        // if (!GameManager.GetState().isPlaying)
+        // {
+        //     return;
+        // }
         if (inputQueue.Count < queueLimit)
         {
             inputQueue.Enqueue(new QueuedInput(cellId, GameManager.GetState().weapon));

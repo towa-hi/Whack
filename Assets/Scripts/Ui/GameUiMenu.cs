@@ -35,7 +35,7 @@ public class GameUiMenu : Menu
     }
     public void GetGameState()
     {
-        if (GameManager.GetState().isPlaying)
+        if (GameManager.GetState() != null)
         {
             levelText.text = "Level " + GameManager.GetState().level;
             scoreText.text = GameManager.GetState().score.ToString();
@@ -47,6 +47,7 @@ public class GameUiMenu : Menu
             UpdateHealthBar(GameManager.GetState().hp, GameManager.GetState().maxHp);
             UpdateLevelTimeBar(GameManager.GetState().levelTimeRemaining, GameManager.GetState().GetLevelDuration());
             coinText.text = "x" + GameManager.GetState().coins;
+            nextLevelPanel.gameObject.SetActive(GameManager.ins.levelState == LevelState.WAITINGFORNEXT);
         }
     }
 
