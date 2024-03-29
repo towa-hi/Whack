@@ -8,7 +8,6 @@ public class InputManager : MonoBehaviour
 {
     public static InputManager ins;
     Controls input;
-    public EventHandler<int> hitPerformed;
     public EventHandler pauseInputPerformed;
 
     Queue<QueuedInput> inputQueue;
@@ -39,21 +38,17 @@ public class InputManager : MonoBehaviour
         input.Game.hit8.performed += ctx => QueueAction(8);
         input.Game.hit9.performed += ctx => QueueAction(9);
         // Handle pause immediately due to its nature
-        input.Game.pause.performed += ctx => pauseInputPerformed?.Invoke(this, EventArgs.Empty);
+        input.Game.pause.performed += ctx => GameManager.ins.OnPauseInput();
     }
 
     void QueueAction(int cellId)
     {
-        // if (!GameManager.GetState().isPlaying)
-        // {
-        //     return;
-        // }
+        if (!GameManager.ins.canAttack) return;
         if (inputQueue.Count < queueLimit)
         {
             inputQueue.Enqueue(new QueuedInput(cellId, GameManager.GetState().weapon));
         }
     }
-
 
     void Update()
     {
@@ -82,7 +77,6 @@ public class InputManager : MonoBehaviour
         {
             timeUntilNextInputProcessing -= Time.deltaTime;
         }
-        
     }
 }
 

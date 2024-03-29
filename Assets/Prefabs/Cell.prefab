@@ -300,6 +300,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 8280153913250319275}
+  - {fileID: 1085366106743975784}
   m_Father: {fileID: 6934486884594030560}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &7234870698006082424
@@ -353,6 +354,7 @@ MonoBehaviour:
   id: 0
   state: 0
   platform: {fileID: 629913959209096756}
+  corpse: {fileID: 7844204965385757384}
   entity: {fileID: 270494082602840380}
   weaponSprite: {fileID: 4200925437151580928}
   downPlatformPos: {x: 0, y: 0, z: 0}
@@ -360,7 +362,6 @@ MonoBehaviour:
   weaponOrigin: {fileID: 7785303571193720672}
   weaponTarget: {fileID: 6112657916538870554}
   uninterruptable: 0
-  upDuration: 0
 --- !u!1 &8506540734009463281
 GameObject:
   m_ObjectHideFlags: 0
@@ -392,6 +393,79 @@ Transform:
   m_Children: []
   m_Father: {fileID: 4662977788513426145}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1001 &705572277886095747
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 746634513939903919}
+    m_Modifications:
+    - target: {fileID: 487880275758071531, guid: f2633a08c80b1224aa43bbbbd760845e, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 487880275758071531, guid: f2633a08c80b1224aa43bbbbd760845e, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 487880275758071531, guid: f2633a08c80b1224aa43bbbbd760845e, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 487880275758071531, guid: f2633a08c80b1224aa43bbbbd760845e, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 487880275758071531, guid: f2633a08c80b1224aa43bbbbd760845e, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 487880275758071531, guid: f2633a08c80b1224aa43bbbbd760845e, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 487880275758071531, guid: f2633a08c80b1224aa43bbbbd760845e, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 487880275758071531, guid: f2633a08c80b1224aa43bbbbd760845e, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 487880275758071531, guid: f2633a08c80b1224aa43bbbbd760845e, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 487880275758071531, guid: f2633a08c80b1224aa43bbbbd760845e, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5766262369232488770, guid: f2633a08c80b1224aa43bbbbd760845e, type: 3}
+      propertyPath: m_Name
+      value: Corpse
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: f2633a08c80b1224aa43bbbbd760845e, type: 3}
+--- !u!4 &1085366106743975784 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 487880275758071531, guid: f2633a08c80b1224aa43bbbbd760845e, type: 3}
+  m_PrefabInstance: {fileID: 705572277886095747}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &7844204965385757384 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 7284155564554187595, guid: f2633a08c80b1224aa43bbbbd760845e, type: 3}
+  m_PrefabInstance: {fileID: 705572277886095747}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 08c280b8a09b00f429be1f0a20faa75d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &5341749613549886660
 PrefabInstance:
   m_ObjectHideFlags: 0

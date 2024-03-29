@@ -9,6 +9,8 @@ public class Cell : MonoBehaviour
     public int id;
     public CellState state;
     public GameObject platform;
+    public Shatterable corpse;
+    
     //public GameObject currentEntity;
     public Entity entity;
     public GameObject weaponSprite;
@@ -103,6 +105,8 @@ public class Cell : MonoBehaviour
         //GameObject newEntityPrefab = Instantiate(entityPrefab, spawnPoint.transform);
         //newEntityPrefab.GetComponent<Entity>().SetEntity(entityData);
         entity.SetEntity(entityData);
+        corpse.originalSprite = entityData.graphic;
+        // TODO: dynamically generate a new corpse for each entity 
         //return newEntityPrefab;
     }
 
@@ -161,6 +165,7 @@ public class Cell : MonoBehaviour
             bool entityDied = entity.ApplyDamage(weaponData);
             if (entityDied)
             {
+                corpse.Shatter();
                 if (entity.data == null)
                 {
                     ChangeState(CellState.FALLING);
@@ -190,6 +195,7 @@ public class Cell : MonoBehaviour
         {
             EntityData reward = entity.data.reward;
             bool droppedReward = entity.OnDeath();
+            corpse.Shatter();
             if (!droppedReward)
             {
                 entity.SetEntity(reward);

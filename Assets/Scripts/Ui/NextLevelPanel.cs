@@ -8,7 +8,7 @@ public class NextLevelPanel : MonoBehaviour
     public void OnNextLevel()
     {
         Debug.Log("wew lad");
-        //GameManager.GetState().GoNextLevel();
+        GameManager.ins.OnNextLevelButton();
     }
     // Start is called before the first frame update
     void Start()

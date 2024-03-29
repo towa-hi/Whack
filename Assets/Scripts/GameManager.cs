@@ -10,13 +10,15 @@ public class GameManager : MonoBehaviour
 {
     public static GameManager ins;
     
+    public LevelState levelState;
     Menu currentMenu;
     [SerializeField] PlayerState state;
     public MainMenu mainMenu;
     public SettingsMenu settingsMenu;
     public GameUiMenu gameMenu;
     public DeathMenu deathMenu;
-
+    public bool canAttack;
+    
     public List<Cell> cells;
     public int startingHp;
     public AnimationCurve levelCellUpTimeCurve;
@@ -49,20 +51,10 @@ public class GameManager : MonoBehaviour
 
     }
 
-    void Start()
-    {
-        InputManager.ins.hitPerformed += HandleHitInput;
-        InputManager.ins.pauseInputPerformed += HandlePauseInput;
-    }
     
-    
-    public LevelState levelState;
     
     void Update()
     {
-        // Early exit if the game state is not set or the game is not in play mode
-        //if (GetState() == null || !GetState().isPlaying) return;
-
         switch (levelState)
         {
             
@@ -110,54 +102,6 @@ public class GameManager : MonoBehaviour
             default:
                 throw new ArgumentOutOfRangeException();
         }
-        
-        
-        /**
-        // Handle Level Time and Progression
-        if (!GetState().isWaitingForNextLevel)
-        {
-            // Decrement level time remaining if above zero
-            if (GetState().levelTimeRemaining > 0)
-            {
-                GetState().levelTimeRemaining -= Time.deltaTime;
-            }
-            else
-            {
-                foreach (Cell cell in cells)
-                {
-                    cell.KillEntityOnCellAndDropReward();
-                }
-                // Handle level completion when time runs out
-                if (AllCellsDown())
-                {
-                    OnLevelEnd();
-                }
-            }
-        }
-
-        // Handle Cell Activation Logic
-        if (GetState().levelTimeRemaining > 0 && !GetState().isWaitingForNextLevel)
-        {
-            timeUntilNextActivation -= Time.deltaTime;
-            if (timeUntilNextActivation <= 0)
-            {
-                // get the number of cells that should be activated
-                int maxNumberOfCellsToActivate = Mathf.Max(1, GetState().GetLevelMaxSimultaneousCellActivations());
-                int numberOfCellsToActivate = Random.Range(1, maxNumberOfCellsToActivate + 1);
-                //List<int> activatedCellIds = new List<int>();
-                for (int i = 0; i < numberOfCellsToActivate; i++)
-                {
-                    Cell activatedCell = RandomlyActivateUnusedCell();
-                    if (activatedCell != null)
-                    {
-                        //activatedCellIds.Add(activatedCell.id);
-                    }
-                }
-                //Debug.Log(activatedCellIds.Count > 0 ? $"Activated these cells: {string.Join(", ", activatedCellIds)}" : "No cells activated this cycle.");
-                timeUntilNextActivation = GetState().GetLevelTimeBetweenCellActivation();
-            }
-        }
-        **/
     }
 
     void SetLevelState(LevelState newState)
@@ -165,11 +109,13 @@ public class GameManager : MonoBehaviour
         switch (newState)
         {
             case LevelState.PREGAME:
+                canAttack = false;
                 // new game initialization here
                 state = new PlayerState(startingHp, weaponDatas[0]);
                 // immediately go into playing state
                 break;
             case LevelState.PLAYING:
+                canAttack = true;
                 // init all cells
                 foreach (Cell cell in cells)
                 {
@@ -177,15 +123,17 @@ public class GameManager : MonoBehaviour
                 }
                 break;
             case LevelState.WAITINGFORCLEANUP:
+                canAttack = true;
                 foreach (Cell cell in cells)
                 {
                     cell.KillEntityOnCellAndDropReward();
                 }
                 break;
             case LevelState.WAITINGFORNEXT:
-                
+                canAttack = false;
                 break;
             case LevelState.LOST:
+                canAttack = false;
                 SetCurrentMenu(deathMenu);
                 break;
             default:
@@ -292,29 +240,10 @@ public class GameManager : MonoBehaviour
         throw new Exception("invalid id");
     }
     
-    void HandleHitInput(object sender, int cellId)
-    {
-        Debug.Log(cellId + " pressed");
-        if (GetCell(cellId).uninterruptable)
-        {
-            // send input into queue
-        }
-        foreach (Cell cell in cells)
-        {
-            cell.OnAnyCellHit(cellId, GetState().weapon);
-        }
-    }
 
-    void HandlePauseInput(object sender, EventArgs e)
+    public void OnPauseInput()
     {
-        /**
-        Debug.Log("pause or unpause game");
-        GetState().SetIsPlaying(!GetState().isPlaying);
-        if (currentMenu == gameMenu)
-        {
-            gameMenu.OnPause(!GetState().isPlaying);
-        }
-        **/
+
     }
     
     void SetCurrentMenu(Menu newMenu)
@@ -347,10 +276,6 @@ public abstract class Menu : MonoBehaviour
 {
     public abstract void Enter();
     public abstract void Exit();
-
-    void Awake()
-    {
-    }
 }
 
 [Serializable]
@@ -378,20 +303,7 @@ public class PlayerState
         weapon = startingWeapon;
         GoLevel(1);
     }
-/**
-    public void SetIsPlaying(bool newIsPlaying)
-    {
-        isPlaying = newIsPlaying;
-        if (isPlaying)
-        {
-            Time.timeScale = 1;
-        }
-        else
-        {
-            Time.timeScale = 0;
-        }
-    }
-**/
+    
     public void AddScore(int amount)
     {
         score += amount;
@@ -405,8 +317,7 @@ public class PlayerState
             coins = 0;
         }
     }
-
-
+    
     public void SetWeapon(WeaponData newWeapon)
     {
         weapon = newWeapon;
