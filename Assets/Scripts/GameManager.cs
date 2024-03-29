@@ -60,33 +60,59 @@ public class GameManager : MonoBehaviour
     
     void Update()
     {
+        // Early exit if the game state is not set or the game is not in play mode
+        if (GetState() == null || !GetState().isPlaying) return;
+
+        // Handle Level Time and Progression
+        if (!GetState().isWaitingForNextLevel)
+        {
+            // Decrement level time remaining if above zero
+            if (GetState().levelTimeRemaining > 0)
+            {
+                GetState().levelTimeRemaining -= Time.deltaTime;
+            }
+            else
+            {
+                // Handle level completion when time runs out
+                if (AllCellsDown())
+                {
+                    OnLevelEnd();
+                }
+            }
+        }
+
+        // Handle Cell Activation Logic
+        if (GetState().levelTimeRemaining > 0 && !GetState().isWaitingForNextLevel)
+        {
+            timeUntilNextActivation -= Time.deltaTime;
+            if (timeUntilNextActivation <= 0)
+            {
+                // get the number of cells that should be activated
+                int maxNumberOfCellsToActivate = Mathf.Max(1, GetState().GetLevelMaxSimultaneousCellActivations());
+                int numberOfCellsToActivate = UnityEngine.Random.Range(1, maxNumberOfCellsToActivate + 1);
+                //List<int> activatedCellIds = new List<int>();
+                for (int i = 0; i < numberOfCellsToActivate; i++)
+                {
+                    Cell activatedCell = RandomlyActivateUnusedCell();
+                    if (activatedCell != null)
+                    {
+                        //activatedCellIds.Add(activatedCell.id);
+                    }
+                }
+                //Debug.Log(activatedCellIds.Count > 0 ? $"Activated these cells: {string.Join(", ", activatedCellIds)}" : "No cells activated this cycle.");
+                timeUntilNextActivation = GetState().GetLevelTimeBetweenCellActivation();
+            }
+        }
+    /**
         if (GetState() == null || !GetState().isPlaying)
         {
             return;
         }
-        if (GetState().levelTimeRemaining >= 0)
+        if (GetState().levelTimeRemaining >= 0 && !GetState().isWaitingForNextLevel)
         {
+            // level still in progress so decrement time
             GetState().levelTimeRemaining -= Time.deltaTime;
-        }
-        else
-        {
-            overtime = true;
-        }
-        if (overtime)
-        {
-            bool allCellsDown = true;
-            foreach (Cell cell in cells.Where(cell => cell.state != CellState.DOWN))
-            {
-                allCellsDown = false;
-            }
-            if (allCellsDown)
-            {
-                OnLevelEnd();
-                overtime = false;
-            }
-        }
-        else
-        {
+    
             // loop for cell activations
             timeUntilNextActivation -= Time.deltaTime;
             if (timeUntilNextActivation <= 0)
@@ -107,12 +133,31 @@ public class GameManager : MonoBehaviour
                 timeUntilNextActivation = GetState().GetLevelTimeBetweenCellActivation();
             }
         }
-
+        else
+        {
+            // time ran out so wait for all cells to be down and then end level
+            bool allCellsDown = true;
+            foreach (Cell cell in cells.Where(cell => cell.state != CellState.DOWN))
+            {
+                allCellsDown = false;
+            }
+            if (!GetState().isWaitingForNextLevel)
+            {
+                OnLevelEnd();
+            }
+        }
+        **/
     }
 
+    bool AllCellsDown()
+    {
+        // Check if all cells are in the DOWN state
+        return cells.All(cell => cell.state == CellState.DOWN);
+    }
+    
     public void OnLevelEnd()
     {
-        GetState().GoNextLevel();
+        GetState().StandbyForNextLevel();
     }
     
     public static PlayerState GetState()
@@ -225,6 +270,11 @@ public class GameManager : MonoBehaviour
     void HandlePauseInput(object sender, EventArgs e)
     {
         Debug.Log("pause or unpause game");
+        GetState().SetIsPlaying(!GetState().isPlaying);
+        if (currentMenu == gameMenu)
+        {
+            gameMenu.OnPause(!GetState().isPlaying);
+        }
     }
     
     void SetCurrentMenu(Menu newMenu)
@@ -271,6 +321,8 @@ public abstract class Menu : MonoBehaviour
 public class PlayerState
 {
     public bool isPlaying;
+    public bool isWaitingForNextLevel;
+    
     public int level;
     public int hp;
     public int maxHp;
@@ -293,6 +345,14 @@ public class PlayerState
     public void SetIsPlaying(bool newIsPlaying)
     {
         isPlaying = newIsPlaying;
+        if (isPlaying)
+        {
+            Time.timeScale = 1;
+        }
+        else
+        {
+            Time.timeScale = 0;
+        }
     }
 
     public void AddScore(int amount)
@@ -334,8 +394,15 @@ public class PlayerState
         return GameManager.ins.levelDurationCurve.Evaluate(level);
     }
 
+    public void StandbyForNextLevel()
+    {
+        isWaitingForNextLevel = true;
+        Debug.Log("standing by");
+    }
+    
     public void GoNextLevel()
     {
+        isWaitingForNextLevel = false;
         level += 1;
         levelTimeRemaining = GetLevelDuration();
         isPlaying = false;

@@ -16,6 +16,8 @@ public class GameUiMenu : Menu
     public TextMeshProUGUI weaponDamageText;
     public TextMeshProUGUI weaponSpeedText;
     public TextMeshProUGUI coinText;
+    public PausePanel pausePanel;
+    public NextLevelPanel nextLevelPanel;
     public override void Enter()
     {
         gameObject.SetActive(true);
@@ -48,6 +50,20 @@ public class GameUiMenu : Menu
         }
     }
 
+
+    public void OnPause(bool paused)
+    {
+        if (paused)
+        {
+            pausePanel.gameObject.SetActive(true);
+            pausePanel.SetText("gaym is paus");
+        }
+        else
+        {
+            pausePanel.gameObject.SetActive(false);
+        }
+    }
+    
     public void Clear()
     {
         
