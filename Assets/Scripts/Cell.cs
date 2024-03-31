@@ -17,13 +17,11 @@ public class Cell : MonoBehaviour
     public Vector3 downPlatformPos;
     public Vector3 upPlatformPos;
     
-    float weaponStartAngle = 0;
-    float weaponEndAngle = 90;
     public Transform weaponOrigin;
     public Transform weaponTarget;
     public bool uninterruptable;
     float upDuration;
-    float upTime;
+    public float upTime;
     float upSpeed = 2f;
     float downSpeed = 1f;
     Coroutine resetPitch;
@@ -42,7 +40,6 @@ public class Cell : MonoBehaviour
         entity.SetEntity(null);
         platform.transform.localPosition = downPlatformPos;
         ChangeState(CellState.DOWN);
-        isResetting = false;
         entity.cellId = id;
     }
     
@@ -74,10 +71,10 @@ public class Cell : MonoBehaviour
     void ChangeState(CellState newState)
     {
         state = newState;
+        entity.OnCellStateChange(newState);
         switch (state)
         {
             case CellState.DOWN:
-                entity.OnExpired();
                 // stop platform
                 break;
             case CellState.RISING:
@@ -85,13 +82,6 @@ public class Cell : MonoBehaviour
                 break;
             case CellState.UP:
                 upTime = upDuration;
-                if (entity.data != null)
-                {
-                    if (entity.data.isNumber)
-                    {
-                        entity.SetAltState(true);
-                    }
-                }
                 break;
             case CellState.FALLING:
                 // drop platform
@@ -103,19 +93,9 @@ public class Cell : MonoBehaviour
 
     public void ActivateCellWithEntity(EntityData entityData, float duration)
     {
-        AddEntity(entityData);
+        entity.SetEntity(entityData);
         upDuration = duration;
         ChangeState(CellState.RISING);
-    }
-
-    public void AddEntity(EntityData entityData)
-    {
-        //GameObject newEntityPrefab = Instantiate(entityPrefab, spawnPoint.transform);
-        //newEntityPrefab.GetComponent<Entity>().SetEntity(entityData);
-        entity.SetEntity(entityData);
-        //corpse.originalSprite = entityData.graphic;
-        // TODO: dynamically generate a new corpse for each entity 
-        //return newEntityPrefab;
     }
 
     public void MoveUp()
@@ -169,6 +149,8 @@ public class Cell : MonoBehaviour
             resetPitch = StartCoroutine(ResetPitchAfterDelay(weaponAudioSource, desiredDuration));
             
             // MOVEMENT STUFF
+            float weaponStartAngle = 0;
+            float weaponEndAngle = 90;
             // Start from the weaponStartAngle by directly setting the local rotation
             weaponSprite.transform.localRotation = Quaternion.Euler(0, 0, weaponStartAngle);
             weaponSprite.transform.position = weaponOrigin.position;
@@ -191,24 +173,26 @@ public class Cell : MonoBehaviour
         CameraEffects.ins.BounceCamera(0.1f, 1.5f);
         if (entity.data != null)
         {
-            if (entity.isInvincible)
+            DamageOutcome outcome = entity.ApplyDamage(weaponData);
+            switch (outcome)
             {
-                weaponAudioSource.PlayOneShot(AudioManager.ins.bounceSound);
-                Debug.Log("bounce");
-            }
-            else
-            {
-                weaponAudioSource.PlayOneShot(GameManager.GetState().weapon.weaponSound);
-                bool entityDied = entity.ApplyDamage(weaponData);
-                if (entityDied)
-                {
+                case DamageOutcome.DAMAGED:
+                    weaponAudioSource.PlayOneShot(GameManager.GetState().weapon.weaponSound);
+                    break;
+                case DamageOutcome.KILLED:
+                    weaponAudioSource.PlayOneShot(GameManager.GetState().weapon.weaponSound);
+                    entity.OnDeath(false);
                     if (entity.data == null)
                     {
-                        ChangeState(CellState.FALLING);
+                        upTime = 0;
                     }
-                }
+                    break;
+                case DamageOutcome.BOUNCED:
+                    weaponAudioSource.PlayOneShot(AudioManager.ins.bounceSound);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
-            
         }
         else
         {
@@ -219,25 +203,6 @@ public class Cell : MonoBehaviour
     void OnWhiff()
     {
         GameManager.ins.ApplyPlayerDamage(1);
-    }
-    
-    bool isResetting;
-    public void ResetCell()
-    {
-        Init();
-    }
-
-    public void KillEntityOnCellAndDropReward()
-    {
-        if (entity.data != null)
-        {
-            EntityData reward = entity.data.reward;
-            bool droppedReward = entity.OnDeath();
-            if (!droppedReward)
-            {
-                entity.SetEntity(reward);
-            }
-        }
     }
 }
 

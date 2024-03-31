@@ -122,7 +122,7 @@ public class GameManager : MonoBehaviour
                 canAttack = true;
                 foreach (Cell cell in cells)
                 {
-                    cell.KillEntityOnCellAndDropReward();
+                    cell.entity.ForceKillAndDropReward();
                 }
                 break;
             case LevelState.WAITINGFORNEXT:
@@ -285,8 +285,9 @@ public class GameManager : MonoBehaviour
 
     public int GetValidNumberForNumberFriend(int numberFriendCell)
     {
-        
+        // disqualify the starting cell
         HashSet<int> invalidCells = new HashSet<int>() {numberFriendCell};
+        // for each cell where a number friend exists disqualify that cell
         foreach (Cell cell in from cell in cells where cell.entity.number != 0 where cell.entity.data != null where cell.entity.data.isNumber select cell)
         {
             Debug.Log("invalid num added " + cell.entity.number);
@@ -300,11 +301,10 @@ public class GameManager : MonoBehaviour
                 validCells.Add(i);
             }
         }
-
         if (validCells.Count == 0)
         {
             Debug.LogWarning("could not find a suitable number for number friend on pos " + numberFriendCell);
-            return -1;
+            return 0;
         }
         else
         {
@@ -323,11 +323,18 @@ public class GameManager : MonoBehaviour
                 {
                     if (cell.entity.number == cellId)
                     {
+                        if (cell.entity.isEntityPointing)
+                        {
+                            Debug.Log("NumberFriendPointingAtThisCell found friend on cell " + cell.id);
+                            return cell.id;
+                        }
+                        /**
                         if (cell.entity.altState = true)
                         {
                             Debug.Log("NumberFriendPointingAtThisCell found friend on cell " + cell.id);
                             return cell.id;
                         }
+                        **/
                     }
                 }
             }

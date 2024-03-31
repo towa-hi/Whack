@@ -1,11 +1,14 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 public class Entity : MonoBehaviour
 {
     public AudioSource audioSource;
-    public bool isBoss;
+    public bool isInvincible;
+    public bool isEntityPointing;
     public int hp;
     public Shatterable corpse;
     public EntityData data;
@@ -14,95 +17,77 @@ public class Entity : MonoBehaviour
     public int cellId;
     public List<Sprite> numbers;
     public SpriteRenderer numberDisplay;
-    public bool altState;
-    public bool isInvincible;
     
     public void SetEntity(EntityData entityData)
     {
         data = entityData;
+        isEntityPointing = false;
+        number = 0;
+        SetInvincible(false);
+        spriteRenderer.sprite = null;
+        spriteRenderer.enabled = false;
+        numberDisplay.enabled = false;
         if (entityData != null)
         {
-            isBoss = entityData.isBoss;
+            Debug.Log("spawning new entity " + entityData.entityName + " on cell " + cellId);
             hp = entityData.hp;
             spriteRenderer.enabled = true;
             spriteRenderer.sprite = entityData.graphic;
-        }
-        else
-        {
-            spriteRenderer.sprite = null;
-            spriteRenderer.enabled = false;
-        }
-        altState = false;
-        if (entityData != null)
-        {
-            if (entityData.entityName == "Number Friend")
+            // SET UP NUMBERFRIEND STUFF
+            if (entityData.isNumber)
             {
-                Debug.Log("number friend spawned");
-            }
-            number = entityData.isNumber ? GameManager.ins.GetValidNumberForNumberFriend(this.cellId) : 0;
-            if (number != 0)
-            {
-                Debug.Log("Setting numbers display");
+                number = GameManager.ins.GetValidNumberForNumberFriend(cellId);
+                if (number <= 0) throw new Exception("something fucked up in the get valid number code");
                 Sprite numberSprite = numbers[number - 1];
                 numberDisplay.sprite = numberSprite;
+                // set as invincible first
+                SetInvincible(true);
             }
-        }
-        else
-        {
-            number = 0;
-        }
-        SetAltState(false);
-    }
-
-    public void SetAltState(bool newAltState)
-    {
-        numberDisplay.enabled = false;
-        if (data == null)
-        {
-            altState = false;
-            return;
-        }
-
-        if (newAltState)
-        {
-            altState = true;
-            // change sprite to alt graphic if exists
-            spriteRenderer.sprite = data.altGraphic != null ? data.altGraphic : data.graphic;
-            // if isNumberFriend
-            if (data.isNumber)
-            {
-                numberDisplay.enabled = true;
-            }
-            else
-            {
-                
-            }
-        }
-        else
-        {
-            spriteRenderer.sprite = data.graphic;
-        }
-
-        if (data.isNumber)
-        {
-            SetInvincible(!newAltState);
         }
     }
 
-    public void SetInvincible(bool newIsInvincible)
+    public void OnCellStateChange(CellState state)
     {
-        Debug.Log("invincible set to " + newIsInvincible);
+        switch (state)
+        {
+            case CellState.DOWN:
+                OnExpired();
+                break;
+            case CellState.RISING:
+                break;
+            case CellState.UP:
+                OnCellUp();
+                break;
+            case CellState.FALLING:
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(state), state, null);
+        }
+    }
+    
+    public void OnCellUp()
+    {
+        if (data != null && data.isNumber)
+        {
+            MakeEntityPoint();
+        }
+    }
+
+    void MakeEntityPoint()
+    {
+        isEntityPointing = true;
+        SetInvincible(false);
+        spriteRenderer.sprite = data.altGraphic;
+        numberDisplay.enabled = true;
+    }
+    
+    void SetInvincible(bool newIsInvincible)
+    {
         isInvincible = newIsInvincible;
-        if (isInvincible)
-        {
-            spriteRenderer.color = Color.cyan;
-        }
-        else
-        {
-            spriteRenderer.color = Color.white;
-        }
+        spriteRenderer.color = isInvincible ? Color.cyan : Color.white;
     }
-    public bool OnDeath()
+    
+    public bool OnDeath(bool alwaysDropGoodie)
     {
         if (data == null) return false;
         // create corpse here
@@ -113,19 +98,38 @@ public class Entity : MonoBehaviour
         // spawn reward
         GameManager.GetState().AddScore(data.scoreReward);
         GameManager.GetState().AddCoin(data.coinReward);
-        if (data.reward != null && Random.value <= data.chanceToSpawnReward)
+        if (alwaysDropGoodie)
         {
-            SetEntity(data.reward);
-            return true;
+            // drop reward if goodie
+            if (data.reward != null && data.reward.isGoodie)
+            {
+                SetEntity(data.reward);
+                return true;
+            }
+            else
+            {
+                // reward not goodie so not dropped
+                return false;
+            }
         }
         else
         {
-            SetEntity(null);
-            return false;
+            // roll for chance to drop reward
+            if (data.reward != null && Random.value <= data.chanceToSpawnReward)
+            {
+                SetEntity(data.reward);
+                return true;
+            }
+            else
+            {
+                // failed reward roll so not dropped
+                SetEntity(null);
+                return false;
+            }
         }
     }
-
-    public void OnExpired()
+    
+    void OnExpired()
     {
         if (data == null) return;
         if (data.expiredDamage > 0)
@@ -135,16 +139,34 @@ public class Entity : MonoBehaviour
         SetEntity(null);
     }
 
-    public bool ApplyDamage(WeaponData weaponData)
+    public DamageOutcome ApplyDamage(WeaponData weaponData)
     {
+        if (isInvincible)
+        {
+            return DamageOutcome.BOUNCED;
+        }
         hp -= weaponData.damage;
         if (hp <= 0)
         {
-            OnDeath();
-            return true;
+            return DamageOutcome.KILLED;
         }
 
-        return false;
+        return DamageOutcome.DAMAGED;
     }
+    
+    public void ForceKillAndDropReward()
+    {
+        if (data != null && !data.isGoodie)
+        {
+            OnDeath(true);
+        }
+    }
+    
 }
 
+public enum DamageOutcome
+{
+    DAMAGED,
+    KILLED,
+    BOUNCED,
+}

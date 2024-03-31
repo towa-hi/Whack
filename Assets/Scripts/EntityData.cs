@@ -21,4 +21,5 @@ public class EntityData : ScriptableObject
     public EntityData reward;
     public AudioClip deathSound;
     public bool isNumber;
+    public bool isGoodie;
 }

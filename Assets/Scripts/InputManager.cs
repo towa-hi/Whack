@@ -45,21 +45,23 @@ public class InputManager : MonoBehaviour
     {
         if (!GameManager.ins.canAttack) return;
         int cellToHit = cellId;
-        int number = GameManager.ins.GetCell(cellId).entity.number;
-        if (number != 0)
+        // check if a number is pointing at this cell first
+        int numberFriendIsPointingAtThisCell = GameManager.ins.NumberFriendPointingAtThisCell(cellId);
+        if (numberFriendIsPointingAtThisCell != -1)
         {
-            if (GameManager.ins.GetCell(cellId).entity.altState == true)
-            {
-                cellToHit = GameManager.ins.GetCell(cellId).entity.number;
-            }
-            
+            cellToHit = numberFriendIsPointingAtThisCell;
+            Debug.Log("swapped input " + cellId + "to " + cellToHit + " because an active numberfriend points to it");
         }
         else
         {
-            int numberFriendIsPointingAtThisCell = GameManager.ins.NumberFriendPointingAtThisCell(cellId);
-            if (numberFriendIsPointingAtThisCell != -1)
+            int number = GameManager.ins.GetCell(cellId).entity.number;
+            if (number != 0)
             {
-                cellToHit = numberFriendIsPointingAtThisCell;
+                if (GameManager.ins.GetCell(cellId).entity.isEntityPointing)
+                {
+                    cellToHit = GameManager.ins.GetCell(cellId).entity.number;
+                    Debug.Log("swapped input " + cellId + " to " + cellToHit + " because an active numberfriend exists on that cell");
+                }
             }
         }
         if (inputQueue.Count < queueLimit)
