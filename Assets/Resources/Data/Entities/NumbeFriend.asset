@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 780ae3245dfe8ee46b301c7bc9830069, type: 3}
+  m_Name: NumbeFriend
+  m_EditorClassIdentifier: 
+  id: 3
+  isNaturallySpawnable: 1
+  isBoss: 0
+  entityName: Number Friend
+  chanceToSpawnReward: 0.1
+  minimumLevel: 1
+  hp: 1
+  expiredDamage: 2
+  scoreReward: 15
+  coinReward: 0
+  graphic: {fileID: 21300000, guid: c441f9f081b70754d82af9a796649265, type: 3}
+  altGraphic: {fileID: 21300000, guid: 31f6f11be7177924d92eaefb0d8c7ea9, type: 3}
+  reward: {fileID: 11400000, guid: 956298ff4862f354d98224412cee4eb0, type: 2}
+  deathSound: {fileID: 8300000, guid: c93c88f29e1c2e2419df24a167b19630, type: 3}
+  isNumber: 1

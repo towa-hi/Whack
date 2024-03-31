@@ -37,10 +37,6 @@ public class GameManager : MonoBehaviour
             ins = this;
             DontDestroyOnLoad(gameObject);
         }
-        else if (this != ins)
-        {
-            Destroy(gameObject);
-        }
         SetCurrentMenu(mainMenu);
         entityDatas = new List<EntityData>(Resources.LoadAll<EntityData>("Data/Entities"));
         itemDatas = new List<ItemData>(Resources.LoadAll<ItemData>("Data/Items"));
@@ -175,7 +171,12 @@ public class GameManager : MonoBehaviour
     
     public void ApplyPlayerDamage(int damage)
     {
+        if (levelState == LevelState.LOST)
+        {
+            return;
+        }
         GetState().hp -= damage;
+        CameraEffects.ins.ShakeCamera(0.3f, 0.1f);
         if (GetState().hp <= 0)
         {
             LoseGame();
@@ -212,8 +213,20 @@ public class GameManager : MonoBehaviour
                 throw new Exception("no valid entities to feed into RaisePlatformWithEntity");
             }
             int randomEntityIndex = Random.Range(0, entities.Count);
+            EntityData entityData = entities[randomEntityIndex];
+            if (entityData.isNumber && GetValidNumberForNumberFriend(randomIndex) == -1)
+            {
+                int newEntityIndex;
+                do
+                {
+                    newEntityIndex = Random.Range(0, entities.Count);
+                } while (newEntityIndex == randomEntityIndex);
+                entityData = entities[newEntityIndex];
+                Debug.Log("rerolled because numberfriend couldnt be spawned");
+            }
+            
             // activate cell
-            selectedCell.ActivateCellWithEntity(entities[randomEntityIndex], GetState().GetLevelCellUpTime());
+            selectedCell.ActivateCellWithEntity(entityData, GetState().GetLevelCellUpTime());
             return selectedCell;
         }
         else
@@ -270,6 +283,58 @@ public class GameManager : MonoBehaviour
         SetCurrentMenu(settingsMenu);
     }
 
+    public int GetValidNumberForNumberFriend(int numberFriendCell)
+    {
+        
+        HashSet<int> invalidCells = new HashSet<int>() {numberFriendCell};
+        foreach (Cell cell in from cell in cells where cell.entity.number != 0 where cell.entity.data != null where cell.entity.data.isNumber select cell)
+        {
+            Debug.Log("invalid num added " + cell.entity.number);
+            invalidCells.Add(cell.entity.number);
+        }
+        List<int> validCells = new List<int>();
+        for (int i = 1; i <= 9; i++)
+        {
+            if (!invalidCells.Contains(i))
+            {
+                validCells.Add(i);
+            }
+        }
+
+        if (validCells.Count == 0)
+        {
+            Debug.LogWarning("could not find a suitable number for number friend on pos " + numberFriendCell);
+            return -1;
+        }
+        else
+        {
+            int index = Random.Range(0, validCells.Count);
+            return validCells[index];
+        }
+    }
+
+    public int NumberFriendPointingAtThisCell(int cellId)
+    {
+        foreach (Cell cell in cells)
+        {
+            if (cell.entity.data != null)
+            {
+                if (cell.entity.data.isNumber)
+                {
+                    if (cell.entity.number == cellId)
+                    {
+                        if (cell.entity.altState = true)
+                        {
+                            Debug.Log("NumberFriendPointingAtThisCell found friend on cell " + cell.id);
+                            return cell.id;
+                        }
+                    }
+                }
+            }
+        }
+
+        return -1;
+    }
 }
 
 public abstract class Menu : MonoBehaviour

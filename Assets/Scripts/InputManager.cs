@@ -44,9 +44,27 @@ public class InputManager : MonoBehaviour
     void QueueAction(int cellId)
     {
         if (!GameManager.ins.canAttack) return;
+        int cellToHit = cellId;
+        int number = GameManager.ins.GetCell(cellId).entity.number;
+        if (number != 0)
+        {
+            if (GameManager.ins.GetCell(cellId).entity.altState == true)
+            {
+                cellToHit = GameManager.ins.GetCell(cellId).entity.number;
+            }
+            
+        }
+        else
+        {
+            int numberFriendIsPointingAtThisCell = GameManager.ins.NumberFriendPointingAtThisCell(cellId);
+            if (numberFriendIsPointingAtThisCell != -1)
+            {
+                cellToHit = numberFriendIsPointingAtThisCell;
+            }
+        }
         if (inputQueue.Count < queueLimit)
         {
-            inputQueue.Enqueue(new QueuedInput(cellId, GameManager.GetState().weapon));
+            inputQueue.Enqueue(new QueuedInput(cellToHit, GameManager.GetState().weapon));
         }
     }
 

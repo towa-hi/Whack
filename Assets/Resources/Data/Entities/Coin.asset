@@ -22,5 +22,6 @@ MonoBehaviour:
   expiredDamage: 0
   scoreReward: 0
   coinReward: 1
-  graphic: {fileID: 21300000, guid: a8c89f0cacba60f45a3b72b0cffc2432, type: 3}
+  graphic: {fileID: 21300000, guid: 7103a59c1e342074683e86b3aa293f0d, type: 3}
   reward: {fileID: 0}
+  deathSound: {fileID: 8300000, guid: a0947c30f7a2a8e4eb3971fb452c542e, type: 3}

@@ -12,4 +12,6 @@ public class WeaponData : ScriptableObject
     public Sprite graphic;
     public float cellFreezeDuration;
     public float actionDuration;
+    public AudioClip weaponSound;
+    public AudioClip weaponWhiffSound;
 }

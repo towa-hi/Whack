@@ -9,9 +9,9 @@ public class Cell : MonoBehaviour
     public int id;
     public CellState state;
     public GameObject platform;
-    public Shatterable corpse;
     
     //public GameObject currentEntity;
+    public AudioSource weaponAudioSource;
     public Entity entity;
     public GameObject weaponSprite;
     public Vector3 downPlatformPos;
@@ -26,7 +26,7 @@ public class Cell : MonoBehaviour
     float upTime;
     float upSpeed = 2f;
     float downSpeed = 1f;
-    //Coroutine platformTimer;
+    Coroutine resetPitch;
     
     void Awake()
     {
@@ -43,6 +43,7 @@ public class Cell : MonoBehaviour
         platform.transform.localPosition = downPlatformPos;
         ChangeState(CellState.DOWN);
         isResetting = false;
+        entity.cellId = id;
     }
     
     
@@ -84,6 +85,13 @@ public class Cell : MonoBehaviour
                 break;
             case CellState.UP:
                 upTime = upDuration;
+                if (entity.data != null)
+                {
+                    if (entity.data.isNumber)
+                    {
+                        entity.SetAltState(true);
+                    }
+                }
                 break;
             case CellState.FALLING:
                 // drop platform
@@ -105,7 +113,7 @@ public class Cell : MonoBehaviour
         //GameObject newEntityPrefab = Instantiate(entityPrefab, spawnPoint.transform);
         //newEntityPrefab.GetComponent<Entity>().SetEntity(entityData);
         entity.SetEntity(entityData);
-        corpse.originalSprite = entityData.graphic;
+        //corpse.originalSprite = entityData.graphic;
         // TODO: dynamically generate a new corpse for each entity 
         //return newEntityPrefab;
     }
@@ -146,6 +154,21 @@ public class Cell : MonoBehaviour
             uninterruptable = true;
             weaponSprite.GetComponent<SpriteRenderer>().enabled = true;
             
+            // AUDIO STUFF
+            if (resetPitch != null)
+            {
+                StopCoroutine(resetPitch);
+            }
+            // Adjust the pitch of the AudioSource to match the action duration
+            float originalSoundDuration = weaponData.weaponWhiffSound.length; // Assuming this is the natural duration of the sound
+            float desiredDuration = weaponData.actionDuration;
+            weaponAudioSource.pitch = originalSoundDuration / desiredDuration;
+            // Play the sound with the adjusted pitch
+            weaponAudioSource.PlayOneShot(AudioManager.ins.whiffSound);
+            // Reset pitch after the sound has played
+            resetPitch = StartCoroutine(ResetPitchAfterDelay(weaponAudioSource, desiredDuration));
+            
+            // MOVEMENT STUFF
             // Start from the weaponStartAngle by directly setting the local rotation
             weaponSprite.transform.localRotation = Quaternion.Euler(0, 0, weaponStartAngle);
             weaponSprite.transform.position = weaponOrigin.position;
@@ -155,22 +178,37 @@ public class Cell : MonoBehaviour
             weaponSprite.transform.DOMove(weaponTarget.position, weaponData.actionDuration).OnComplete(() => OnWeaponAnimationComplete(weaponData));
         }
     }
+    IEnumerator ResetPitchAfterDelay(AudioSource source, float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        source.pitch = 1.0f; // Reset pitch to normal
+    }
     
-    public void OnWeaponAnimationComplete(WeaponData weaponData)
+    void OnWeaponAnimationComplete(WeaponData weaponData)
     {
         weaponSprite.GetComponent<SpriteRenderer>().enabled = false;
         uninterruptable = false;
+        CameraEffects.ins.BounceCamera(0.1f, 1.5f);
         if (entity.data != null)
         {
-            bool entityDied = entity.ApplyDamage(weaponData);
-            if (entityDied)
+            if (entity.isInvincible)
             {
-                corpse.Shatter();
-                if (entity.data == null)
+                weaponAudioSource.PlayOneShot(AudioManager.ins.bounceSound);
+                Debug.Log("bounce");
+            }
+            else
+            {
+                weaponAudioSource.PlayOneShot(GameManager.GetState().weapon.weaponSound);
+                bool entityDied = entity.ApplyDamage(weaponData);
+                if (entityDied)
                 {
-                    ChangeState(CellState.FALLING);
+                    if (entity.data == null)
+                    {
+                        ChangeState(CellState.FALLING);
+                    }
                 }
             }
+            
         }
         else
         {
@@ -195,7 +233,6 @@ public class Cell : MonoBehaviour
         {
             EntityData reward = entity.data.reward;
             bool droppedReward = entity.OnDeath();
-            corpse.Shatter();
             if (!droppedReward)
             {
                 entity.SetEntity(reward);

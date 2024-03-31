@@ -17,5 +17,8 @@ public class EntityData : ScriptableObject
     public int scoreReward;
     public int coinReward;
     public Sprite graphic;
+    public Sprite altGraphic;
     public EntityData reward;
+    public AudioClip deathSound;
+    public bool isNumber;
 }

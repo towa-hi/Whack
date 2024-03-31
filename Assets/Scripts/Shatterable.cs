@@ -109,7 +109,8 @@ public class Shatterable : MonoBehaviour
             Rigidbody rb = child.GetComponent<Rigidbody>();
             if (rb != null)
             {
-                rb.AddExplosionForce(explosionForce, transform.position, explosionRadius);
+                Vector3 positionInFront = transform.position + new Vector3(0, 0, -0.5f);
+                rb.AddExplosionForce(explosionForce, positionInFront, explosionRadius);
             }
         }
     }
